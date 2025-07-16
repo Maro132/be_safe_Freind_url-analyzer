@@ -2,4 +2,4 @@
 
 This is a simple web application for analyzing url 
 
-**Live Demo:** [Try the Secure File Encryptor/Decryptor here!](https://file-encryptor-decryptor-jkycfrbasipqhccfr233mw.streamlit.app/)
+**Live Demo:** [Try the url analyzer here:](https://besafefreindurl-analyzer-8kcczuu2z7uao4feldpkpm.streamlit.app/)
