@@ -5,7 +5,7 @@ import ipaddress
 import json
 import os
 import streamlit as st
-from requests.exceptions import ConnectionError, RequestException # Import specific exception types
+from requests.exceptions import ConnectionError, RequestException, SSLError # Import SSLError
 
 # --- IMPORTANT SECURITY WARNING ---
 # The Google Safe Browsing API key and related code have been removed as per your request.
@@ -141,7 +141,7 @@ def check_typosquatting(url):
             for i in range(len(domain)):
                 if domain[i] != common_domain[i]:
                     diff_count += 1
-            if diff_count == 2: # Check for exactly two differences, could be a swap
+            if diff_count == 2: # Check for exactly two two differences, could be a swap
                 # This is a very basic swap check, a real one would check positions
                 pass # Not returning directly, let Levenshtein or other specific checks handle it
 
@@ -167,7 +167,9 @@ def check_redirection(url):
             return True, f"The URL redirects from '{initial_domain}' to a different base domain: '{final_domain}'. This could be risky."
         # No warning if it redirects within the same base domain (e.g., www to non-www, http to https, or subdomain to subdomain)
         # No warning if no redirection occurred at all (response.url == url)
-    except ConnectionError as e: # Catch connection errors specifically
+    except SSLError as e: # Catch SSL errors specifically
+        return True, "Cannot connect, check if the URL is correct."
+    except ConnectionError as e: # Catch other connection errors (like DNS or connection refused)
         parsed_url = urlparse(url)
         hostname = parsed_url.netloc
 
