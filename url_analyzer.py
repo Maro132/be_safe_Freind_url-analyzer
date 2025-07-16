@@ -33,29 +33,28 @@ def get_base_domain(domain):
         return ".".join(parts[-2:])
     return domain # Fallback for very short or invalid domains
 
-def are_strings_very_similar(s1, s2, max_diff=1):
+def levenshtein_distance(s1, s2):
     """
-    Checks if two strings are very similar, allowing for a small number of differences.
-    This is a simplified comparison, not a full Levenshtein implementation.
-    It counts character mismatches for strings of similar length.
+    Calculates the Levenshtein distance between two strings.
+    This measures the minimum number of single-character edits (insertions, deletions, or substitutions)
+    required to change one word into the other.
     """
-    if not s1 or not s2: # Handle empty strings
-        return False
+    if len(s1) < len(s2):
+        return levenshtein_distance(s2, s1)
 
-    # If lengths are too different, they are not very similar
-    if abs(len(s1) - len(s2)) > max_diff:
-        return False
+    if len(s2) == 0:
+        return len(s1)
 
-    diff_count = 0
-    # Iterate up to the length of the shorter string
-    for i in range(min(len(s1), len(s2))):
-        if s1[i] != s2[i]:
-            diff_count += 1
-    
-    # Add the difference in lengths to the count (accounts for insertions/deletions)
-    diff_count += abs(len(s1) - len(s2))
-
-    return diff_count <= max_diff
+    previous_row = range(len(s2) + 1)
+    for i, c1 in enumerate(s1):
+        current_row = [i + 1]
+        for j, c2 in enumerate(s2):
+            insertions = previous_row[j + 1] + 1
+            deletions = current_row[j] + 1
+            substitutions = previous_row[j] + (c1 != c2)
+            current_row.append(min(insertions, deletions, substitutions))
+        previous_row = current_row
+    return previous_row[-1]
 
 
 def check_url_shortener(url):
@@ -85,8 +84,8 @@ def check_url_shortener(url):
 
 def check_typosquatting(url):
     """
-    Checks for potential typosquatting against a list of common domains.
-    This is a basic heuristic check; more advanced methods exist (e.g., Levenshtein distance).
+    Checks for potential typosquatting against a list of common domains using Levenshtein distance
+    and specific common typo patterns.
     Returns (True, message) if potential typosquatting, (False, None) otherwise.
     """
     common_domains = [
@@ -96,32 +95,61 @@ def check_typosquatting(url):
         "reddit.com", "ebay.com", "yahoo.com"
     ]
     parsed_url = urlparse(url)
-    domain = parsed_url.netloc.lower().replace("www.", "") # Normalize domain (e.g., "www.facebook.com" -> "facebook.com")
+    domain = parsed_url.netloc.lower().replace("www.", "") # Normalize domain
+
+    # Extract base domain for more accurate comparison
+    input_base_domain = get_base_domain(domain)
 
     for common_domain in common_domains:
-        # If the domain is an exact match to a common domain, it's not typosquatting
+        common_base_domain = get_base_domain(common_domain)
+
+        # 1. Exact match: If it's the exact common domain, it's not typosquatting.
         if domain == common_domain:
             return False, None
 
-        # Check for legitimate subdomains (e.g., en.wikipedia.org for wikipedia.org)
-        # If the domain ends with the common_domain (preceded by a dot), it's likely a legitimate subdomain.
-        if domain.endswith("." + common_domain):
+        # 2. Legitimate subdomain: If the input domain is a subdomain of a common domain, it's not typosquatting.
+        #    e.g., 'en.wikipedia.org' for 'wikipedia.org'
+        if domain.endswith("." + common_base_domain):
             return False, None
+        
+        # 3. Levenshtein Distance Check on Base Domains:
+        #    This is the core "smart" check for typos.
+        #    We compare the base domains. A distance of 1 or 2 is highly suspicious.
+        distance = levenshtein_distance(input_base_domain, common_base_domain)
+        if distance > 0 and distance <= 2: # Allow 1 or 2 character differences
+            # Add additional checks to reduce false positives for very short domains or unrelated domains
+            # For example, if 'a.com' vs 'b.com' has distance 1, it's not typosquatting.
+            # We need to ensure there's a reasonable length to the domains being compared.
+            if len(input_base_domain) >= 5 and len(common_base_domain) >= 5: # Only apply for reasonably long domains
+                return True, f"The URL '{url}' might be typosquatting, mimicking '{common_domain}' (Levenshtein distance: {distance})."
 
-        # Normalize common_domain for comparison (e.g., remove dot for 'googlecom' vs 'google.com' type typos)
-        clean_domain = re.sub(r'[^a-z0-9]', '', domain)
-        clean_common = re.sub(r'[^a-z0-9]', '', common_domain.lower().replace("www.", ""))
+        # 4. Common Typo Substitutions (e.g., l/1, o/0, missing dot)
+        #    These are strong indicators regardless of Levenshtein distance for base domains.
+        #    We apply these checks on the full domain for more coverage.
+        
+        # Remove dots for comparison if typo is missing dot (e.g., 'googlecom' vs 'google.com')
+        domain_no_dot = domain.replace(".", "")
+        common_domain_no_dot = common_domain.replace(".", "")
 
-        # Check for simple, common typos (e.g., l/1, o/0, missing dot, very close similarity)
-        # This part is now more focused using are_strings_very_similar
-        if (are_strings_very_similar(clean_domain, clean_common, max_diff=1) or # Very close (1 char diff)
-            are_strings_very_similar(domain.replace('l', '1'), common_domain, max_diff=0) or # l/1 substitution
-            are_strings_very_similar(domain.replace('o', '0'), common_domain, max_diff=0) or # o/0 substitution
-            are_strings_very_similar(domain.replace('s', '5'), common_domain, max_diff=0) or # s/5 substitution
-            are_strings_very_similar(domain.replace('a', '@'), common_domain, max_diff=0) or # a/@ substitution
-            (domain.replace('.', '') == common_domain.replace('.', '') and domain != common_domain) # e.g., googlecom vs google.com
-        ):
-            return True, f"The URL '{url}' might be typosquatting, mimicking '{common_domain}'."
+        if (domain_no_dot == common_domain_no_dot and domain != common_domain):
+            return True, f"The URL '{url}' might be typosquatting, mimicking '{common_domain}' (missing dot typo)."
+
+        # Character substitutions (e.g., goog1e.com)
+        if (domain.replace('l', '1') == common_domain or
+            domain.replace('o', '0') == common_domain or
+            domain.replace('s', '5') == common_domain or
+            domain.replace('a', '@') == common_domain):
+            return True, f"The URL '{url}' might be typosquatting, mimicking '{common_domain}' (character substitution typo)."
+        
+        # Check for swapped adjacent characters (e.g., goolge.com) - simple heuristic
+        if len(domain) == len(common_domain):
+            diff_count = 0
+            for i in range(len(domain)):
+                if domain[i] != common_domain[i]:
+                    diff_count += 1
+            if diff_count == 2: # Check for exactly two differences, could be a swap
+                # This is a very basic swap check, a real one would check positions
+                pass # Not returning directly, let Levenshtein or other specific checks handle it
 
     return False, None
 
