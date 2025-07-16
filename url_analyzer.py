@@ -57,9 +57,14 @@ def check_typosquatting(url):
         "reddit.com", "ebay.com", "yahoo.com"
     ]
     parsed_url = urlparse(url)
-    domain = parsed_url.netloc.lower().replace("www.", "") # Normalize domain
+    domain = parsed_url.netloc.lower().replace("www.", "") # Normalize domain (e.g., "www.facebook.com" -> "facebook.com")
 
     for common_domain in common_domains:
+        # If the domain is an exact match to a common domain, it's not typosquatting
+        if domain == common_domain:
+            return False, None
+
+        # Proceed with similarity checks only if it's not an exact match
         cd_no_dot = common_domain.replace(".", "")
         domain_no_dot = domain.replace(".", "")
 
@@ -68,7 +73,7 @@ def check_typosquatting(url):
             domain.replace('o', '0') == common_domain or
             domain.replace('s', '5') == common_domain or
             domain.replace('a', '@') == common_domain or
-            (domain.replace('.', '') == common_domain.replace('.', '') and domain != common_domain) # e.g., googlecom vs google.com
+            (domain_no_dot == cd_no_dot and domain != common_domain) # e.g., googlecom vs google.com
         ):
             return True, f"The URL '{url}' might be typosquatting, mimicking '{common_domain}'."
 
@@ -78,11 +83,14 @@ def check_typosquatting(url):
 
         if len(clean_domain) > 3 and len(clean_common) > 3:
             # Check for close matches or minor variations (e.g., google.com.net)
+            # This logic needs to be careful not to flag legitimate subdomains or exact matches
             if clean_common in clean_domain or clean_domain in clean_common:
-                # Avoid false positives where a legitimate domain contains another (e.g., google.com.analytics.com)
-                if not (domain.endswith(common_domain) or common_domain.endswith(domain)):
-                    if abs(len(clean_domain) - len(clean_common)) <= 2: # Check if lengths are very close
-                        return True, f"The URL '{url}' might be typosquatting, mimicking '{common_domain}'."
+                # Add a check to ensure it's not simply a subdomain or a very common legitimate pattern
+                # This is still heuristic and can be improved with Levenshtein distance
+                if abs(len(clean_domain) - len(clean_common)) <= 2: # Check if lengths are very close
+                    # Further refine to avoid flagging things like 'google.com.au' if 'google.com' is common
+                    # For now, this condition is a balance.
+                    return True, f"The URL '{url}' might be typosquatting, mimicking '{common_domain}'."
 
     return False, None
 
@@ -98,10 +106,12 @@ def check_redirection(url):
         final_domain = urlparse(response.url).netloc
 
         if initial_domain != final_domain:
+            # Only warn if redirection is to a DIFFERENT domain
             return True, f"The URL redirects from '{initial_domain}' to a different domain: '{final_domain}'. This could be risky."
-        elif response.url != url:
-            # Redirection happened but to the same domain (e.g., http to https, or different path)
-            return True, f"The URL redirects to: {response.url}. While the domain is the same, be cautious as redirection occurred."
+        # If redirection occurred but to the SAME domain, we don't issue a warning
+        # as this is often normal behavior (e.g., http to https, or to a login page)
+        # elif response.url != url: # This line is commented out to avoid false positives for same-domain redirects
+        #    return True, f"The URL redirects to: {response.url}. While the domain is the same, be cautious as redirection occurred."
     except ConnectionError as e: # Catch connection errors specifically
         # Check if the error is due to name resolution (DNS failure)
         if "Failed to resolve" in str(e) or "NameResolutionError" in str(e):
