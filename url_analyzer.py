@@ -5,11 +5,11 @@ import ipaddress
 import json
 import os
 import streamlit as st
-from requests.exceptions import ConnectionError, RequestException, SSLError # Import SSLError
+from requests.exceptions import ConnectionError, RequestException, SSLError
 
 # --- IMPORTANT SECURITY WARNING ---
-# The Google Safe Browsing API key and related code have been removed as per your request.
-# This means the application will no longer perform checks using Google's Safe Browsing service.
+# The Google Safe Browse API key and related code have been removed as per your request.
+# This means the application will no longer perform checks using Google's Safe Browse service.
 
 # --- be_$afe_friend! Core Functions ---
 
@@ -223,8 +223,8 @@ def check_ip_in_url(url):
         # Not a valid IP address
         return False, None
 
-# The check_google_safe_browsing function has been removed as per user request.
-# def check_google_safe_browsing(url):
+# The check_google_safe_Browse function has been removed as per user request.
+# def check_google_safe_Browse(url):
 #     """
 #     This function has been removed as per user request.
 #     """
@@ -261,12 +261,12 @@ def analyze_url(url):
     if is_ip_url:
         warnings.append(f"⚠️ Warning: {ip_url_msg} (This could lead to data theft).")
 
-    # The Google Safe Browsing check has been removed as per user request.
-    # is_malicious, safe_browsing_msg = check_google_safe_browsing(url)
-    # if is_malicious: # If Google Safe Browsing detected it as malicious
-    #     warnings.append(f"🚨 DANGER: {safe_browsing_msg}")
-    # elif safe_browsing_msg and not is_malicious: # If there was an error message but not malicious
-    #     warnings.append(f"⚠️ Warning: {safe_browsing_msg}")
+    # The Google Safe Browse check has been removed as per user request.
+    # is_malicious, safe_Browse_msg = check_google_safe_Browse(url)
+    # if is_malicious: # If Google Safe Browse detected it as malicious
+    #     warnings.append(f"🚨 DANGER: {safe_Browse_msg}")
+    # elif safe_Browse_msg and not is_malicious: # If there was an error message but not malicious
+    #     warnings.append(f"⚠️ Warning: {safe_Browse_msg}")
 
 
     return warnings
@@ -391,6 +391,10 @@ def main_streamlit_app():
     # Input field for the URL
     user_url = st.text_input("Enter URL to analyze:", "https://").strip()
 
+    # Initialize session state for history if it doesn't exist
+    if 'history' not in st.session_state:
+        st.session_state.history = []
+
     # Analyze button
     if st.button("Analyze URL"):
         if not user_url: # Check if empty after stripping
@@ -405,14 +409,40 @@ def main_streamlit_app():
             st.markdown("---")
             st.markdown("### Analysis Results")
 
-            # Display results
+            current_result_display = []
             if results:
                 for warning in results:
-                    # Since Google Safe Browsing is removed, there will be no DANGER messages from it.
-                    # All remaining warnings will be displayed as regular warnings.
                     st.markdown(f"<p class='warning-text'>{warning}</p>", unsafe_allow_html=True)
+                    current_result_display.append(warning) # Store for history
             else:
                 st.markdown("<p class='safe-text'>✅ Good news! The URL appears to be safe and free from common manipulations.</p>", unsafe_allow_html=True)
+                current_result_display.append("✅ Safe!") # Store for history
+
+            # Add current scan to history (most recent first)
+            st.session_state.history.insert(0, {"url": user_url, "results": current_result_display})
+
+            st.markdown("---")
+    
+    # Display History
+    if st.session_state.history:
+        st.markdown("## Recently Scanned URLs")
+        st.markdown("---")
+        # Add a button to clear history
+        if st.button("Clear History"):
+            st.session_state.history = []
+            st.experimental_rerun() # Rerun to clear display immediately
+            
+        for i, entry in enumerate(st.session_state.history):
+            st.markdown(f"**URL:** `{entry['url']}`")
+            if entry['results']:
+                for res in entry['results']:
+                    # Use appropriate styling for history items
+                    if "DANGER" in res:
+                        st.markdown(f"<p class='danger-text' style='font-size:0.9em; margin-left:15px;'>{res}</p>", unsafe_allow_html=True)
+                    elif "Warning" in res:
+                        st.markdown(f"<p class='warning-text' style='font-size:0.9em; margin-left:15px;'>{res}</p>", unsafe_allow_html=True)
+                    else: # For "Safe!" message
+                        st.markdown(f"<p class='safe-text' style='font-size:0.9em; margin-left:15px;'>{res}</p>", unsafe_allow_html=True)
             st.markdown("---")
 
 # This ensures that main_streamlit_app() runs only when the script is executed directly
