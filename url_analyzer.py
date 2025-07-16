@@ -174,11 +174,28 @@ def check_redirection(url):
         # No warning if it redirects within the same base domain (e.g., www to non-www, http to https, or subdomain to subdomain)
         # No warning if no redirection occurred at all (response.url == url)
     except ConnectionError as e: # Catch connection errors specifically
-        # Check if the error is due to name resolution (DNS failure)
+        parsed_url = urlparse(url)
+        hostname = parsed_url.netloc
+
+        # Check if the error is due to a private IP address connection attempt
+        is_private_ip = False
+        try:
+            ip_obj = ipaddress.ip_address(hostname)
+            if ip_obj.is_private:
+                is_private_ip = True
+        except ValueError:
+            pass # Not an IP address or invalid IP
+
+        # If it's a private IP and a connection error occurred, suppress this specific warning.
+        # The check_ip_in_url function will still flag it as an IP address.
+        if is_private_ip:
+            return False, None # Suppress the network error warning for private IPs
+
+        # If the error is due to name resolution (DNS failure) for a non-private IP
         if "Failed to resolve" in str(e) or "NameResolutionError" in str(e):
-            return True, f"The URL's domain ('{urlparse(url).netloc}') could not be resolved (DNS error). This might indicate a non-existent or malicious domain. Be cautious."
+            return True, f"The URL's domain ('{hostname}') could not be resolved (DNS error). This might indicate a non-existent or malicious domain. Be cautious."
         else:
-            # Other connection errors (e.g., host unreachable, connection refused)
+            # Other connection errors (e.g., host unreachable, connection refused) for non-private IPs
             return True, f"Could not connect to the URL due to a network error: {e}. Be cautious."
     except RequestException as e: # Catch other general request-related errors
         return True, f"Could not check for redirection due to an unexpected error: {e}. Be cautious."
@@ -202,7 +219,9 @@ def check_ip_in_url(url):
     hostname = parsed_url.netloc
     try:
         # ipaddress module can parse and validate IP addresses
-        ipaddress.ip_address(hostname)
+        ip_obj = ipaddress.ip_address(hostname)
+        # We only flag it if it's not a private IP, as private IPs are handled differently in redirection check.
+        # However, the user wants a warning for *any* IP in URL, so we keep this general.
         return True, f"The URL uses an IP address ({hostname}) instead of a domain name. This can be suspicious."
     except ValueError:
         # Not a valid IP address
