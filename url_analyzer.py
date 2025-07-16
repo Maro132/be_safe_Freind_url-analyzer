@@ -232,9 +232,12 @@ def check_google_safe_browsing(url):
     Uses Google Safe Browsing API to check if the URL is malicious.
     Returns (True, message) if malicious, (False, None) otherwise.
     """
+    # Debugging: Print API key to verify it's loaded
+    print(f"DEBUG: GOOGLE_SAFE_BROWSING_API_KEY: {GOOGLE_SAFE_BROWSING_API_KEY}")
+
     # Check if API key is available
     if not GOOGLE_SAFE_BROWSING_API_KEY:
-        # This case should ideally not be reached if key is hardcoded, but good for robustness
+        print("DEBUG: API Key is empty or None. Skipping Safe Browsing check.")
         return False, "Google Safe Browsing API key is missing. Skipping check."
 
     api_url = f"https://safebrowsing.googleapis.com/v4/threatMatches:find?key={GOOGLE_SAFE_BROWSING_API_KEY}"
@@ -254,24 +257,32 @@ def check_google_safe_browsing(url):
             "threatEntries": [{"url": url}]
         }
     }
+    print(f"DEBUG: Sending payload to Safe Browsing API: {json.dumps(payload)}")
 
     try:
         # Make the POST request to the Safe Browsing API
         response = requests.post(api_url, headers=headers, data=json.dumps(payload), timeout=10)
+        print(f"DEBUG: Safe Browsing API Response Status: {response.status_code}")
+        print(f"DEBUG: Safe Browsing API Response Body: {response.text}")
+
         response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
         result = response.json()
 
         if "matches" in result:
             # If matches are found, it means the URL is malicious
             threat_type = result['matches'][0]['threatType'].replace('_', ' ').title()
+            print(f"DEBUG: Safe Browsing detected match: {threat_type}")
             return True, f"Google Safe Browsing detected the URL as: {threat_type}"
         else:
             # No matches found, URL is clean according to Safe Browsing
+            print("DEBUG: Safe Browsing found no matches.")
             return False, None
     except requests.exceptions.RequestException as e:
+        print(f"DEBUG: RequestException caught: {e}")
         # Handle errors during the API call
         return False, f"Error checking with Google Safe Browsing API: {e}. This check could not be completed."
     except json.JSONDecodeError:
+        print(f"DEBUG: JSONDecodeError caught. Response was not valid JSON.")
         # Handle cases where the API response is not valid JSON
         return False, "Failed to decode Google Safe Browsing API response. This check could not be completed."
 
