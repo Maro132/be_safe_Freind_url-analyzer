@@ -331,9 +331,10 @@ def main_streamlit_app():
         .stApp {
             background-color: #000000; /* Pure Black background for the app container */
             color: #add8e6;
+            padding: 20px; /* Overall padding for the app */
         }
         /* Customizing Streamlit's internal components for consistent theme */
-        .css-fg4pbf, .css-1d3z93v, .stTextInput, .stButton, .stAlert {
+        .css-fg4pbf, .css-1d3z93v, .stTextInput, .stButton, .stAlert, .stSpinner div {
             font-family: 'IBM Plex Mono', monospace !important;
         }
         .css-fg4pbf { /* Streamlit header - can be targetted more specifically */
@@ -341,58 +342,74 @@ def main_streamlit_app():
         }
         .css-1d3z93v { /* Main content area, often the 'block' holding content */
             background-color: #1a2a3a; /* Slightly lighter dark blue */
-            padding: 20px;
+            padding: 30px; /* Increased padding */
             border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Subtle shadow for depth */
+            box-shadow: 0 4px 15px rgba(0, 255, 0, 0.1); /* More prominent glow shadow */
+            margin-bottom: 20px; /* Space between sections */
         }
         .stTextInput > div > div > input {
             background-color: #001a33; /* Even darker blue for input */
             color: #add8e6;
             border: 1px solid #0056b3; /* Darker blue border */
-            border-radius: 5px;
-            padding: 10px;
+            border-radius: 8px; /* Slightly more rounded */
+            padding: 12px; /* Increased padding */
+            font-size: 1.1em; /* Slightly larger font */
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .stTextInput > div > div > input:focus {
+            border-color: #32cd32; /* Green border on focus */
+            box-shadow: 0 0 0 2px rgba(50, 205, 50, 0.5); /* Green glow on focus */
+            outline: none;
         }
         .stButton > button {
             background-color: #0056b3; /* Darker blue button */
             color: white;
             border: none;
-            border-radius: 5px;
-            padding: 10px 20px;
+            border-radius: 8px; /* Slightly more rounded */
+            padding: 12px 25px; /* Increased padding */
             cursor: pointer;
-            transition: background-color 0.3s ease; /* Smooth hover effect */
+            transition: background-color 0.3s ease, transform 0.2s ease; /* Smooth hover and press effect */
+            font-size: 1.1em;
+            font-weight: bold;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
         .stButton > button:hover {
             background-color: #007bff; /* Lighter blue on hover */
+            transform: translateY(-2px); /* Slight lift effect */
+        }
+        .stButton > button:active {
+            transform: translateY(0); /* Press effect */
         }
         .warning-text {
             color: #ff4500; /* OrangeRed for warnings */
+            font-weight: bold;
         }
         .danger-text {
             color: #dc3545; /* Red for dangers */
             font-weight: bold; /* Make danger messages stand out */
+            font-size: 1.1em; /* Slightly larger for danger */
         }
         .safe-text {
             color: #28a745; /* Green for safe */
+            font-weight: bold;
         }
         h1, h2, h3, h4, h5, h6 {
             font-family: 'IBM Plex Mono', monospace;
             color: #32cd32; /* Lime Green for headers */
             text-shadow: 1px 1px 2px rgba(0, 255, 0, 0.3); /* Subtle glow for headers */
+            margin-bottom: 15px; /* Space below headers */
         }
-        .stAlert {
-            background-color: #1a2a3a;
-            color: #add8e6;
-            border-left: 5px solid; /* Add a colored border to alerts */
-            border-color: #0056b3; /* Default alert border color */
+        p {
+            margin-bottom: 10px; /* Space below paragraphs */
         }
-        .stAlert.error {
-            border-color: #dc3545; /* Red border for errors */
+        hr {
+            border-top: 1px dashed #0056b3;
+            margin-top: 20px;
+            margin-bottom: 20px;
         }
-        .stAlert.warning {
-            border-color: #ffc107; /* Yellow border for warnings */
-        }
-        .stAlert.success {
-            border-color: #28a745; /* Green border for success */
+        /* Spinner color */
+        .stSpinner > div > div {
+            border-top-color: #32cd32 !important; /* Green spinner */
         }
         </style>
         """, unsafe_allow_html=True
@@ -401,20 +418,20 @@ def main_streamlit_app():
     # Main title and subtitle with custom styles
     st.markdown(
         """
-        <h1 style='text-align: left; color: #32cd32; font-size: 40px; padding-left: 20px; padding-top: 10px;'>
-            be<sub><span style='font-size: 0.7em;'>$</span></sub>afe_friend!
+        <h1 style='text-align: left; color: #32cd32; font-size: 40px; padding-left: 0px; padding-top: 0px; margin-bottom: 5px;'>
+            be<span style='font-size: 0.7em;'>$</span>afe_friend!
         </h1>
-        <p style='text-align: left; color: #add8e6; font-size: 18px; padding-left: 20px;'>
+        <p style='text-align: left; color: #add8e6; font-size: 18px; padding-left: 0px; margin-top: 0;'>
             Your Digital Guardian
         </p>
-        <hr style='border-top: 1px dashed #0056b3;'>
+        <hr style='border-top: 1px dashed #0056b3; margin-top: 10px; margin-bottom: 30px;'>
         """, unsafe_allow_html=True
     )
 
-    st.write("Hello Maro! Enter a URL below to check its safety.")
+    st.write("Hello friend! Enter a URL below to check its safety.")
 
     # Input field for the URL
-    user_url = st.text_input("Enter URL to analyze:", "https://").strip() # Added .strip() here
+    user_url = st.text_input("Enter URL to analyze:", "https://").strip()
 
     # Analyze button
     if st.button("Analyze URL"):
