@@ -270,10 +270,10 @@ def check_google_safe_browsing(url):
             return False, None
     except requests.exceptions.RequestException as e:
         # Handle errors during the API call
-        return False, f"Error checking with Google Safe Browsing: {e}. Be cautious."
+        return False, f"Error checking with Google Safe Browsing API: {e}. This check could not be completed."
     except json.JSONDecodeError:
         # Handle cases where the API response is not valid JSON
-        return False, "Failed to decode Google Safe Browsing API response. Be cautious."
+        return False, "Failed to decode Google Safe Browsing API response. This check could not be completed."
 
 # --- Main Analysis Function ---
 
@@ -308,8 +308,11 @@ def analyze_url(url):
 
     # This is a critical check, so it's placed last and gives a "DANGER" message
     is_malicious, safe_browsing_msg = check_google_safe_browsing(url)
-    if is_malicious:
+    if is_malicious: # If Google Safe Browsing detected it as malicious
         warnings.append(f"🚨 DANGER: {safe_browsing_msg}")
+    elif safe_browsing_msg and not is_malicious: # If there was an error message but not malicious
+        warnings.append(f"⚠️ Warning: {safe_browsing_msg}")
+
 
     return warnings
 
