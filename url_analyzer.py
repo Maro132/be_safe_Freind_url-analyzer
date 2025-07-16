@@ -324,12 +324,12 @@ def main_streamlit_app():
         <style>
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap');
         body {
-            background-color: #000000; /* Pure Black background */
+            background-color: #1a1a1a; /* Light black / Very dark gray */
             color: #add8e6; /* Light blue */
             font-family: 'IBM Plex Mono', monospace;
         }
         .stApp {
-            background-color: #000000; /* Pure Black background for the app container */
+            background-color: #1a1a1a; /* Light black / Very dark gray for the app container */
             color: #add8e6;
             padding: 20px; /* Overall padding for the app */
         }
@@ -341,14 +341,14 @@ def main_streamlit_app():
             color: #32cd32; /* Lime Green */
         }
         .css-1d3z93v { /* Main content area, often the 'block' holding content */
-            background-color: #1a2a3a; /* Slightly lighter dark blue */
+            background-color: #2a2a2a; /* Slightly lighter dark gray for content area */
             padding: 30px; /* Increased padding */
             border-radius: 10px;
             box-shadow: 0 4px 15px rgba(0, 255, 0, 0.1); /* More prominent glow shadow */
             margin-bottom: 20px; /* Space between sections */
         }
         .stTextInput > div > div > input {
-            background-color: #001a33; /* Even darker blue for input */
+            background-color: #0d0d0d; /* Even darker gray for input */
             color: #add8e6;
             border: 1px solid #0056b3; /* Darker blue border */
             border-radius: 8px; /* Slightly more rounded */
@@ -419,7 +419,7 @@ def main_streamlit_app():
     st.markdown(
         """
         <h1 style='text-align: left; color: #32cd32; font-size: 40px; padding-left: 0px; padding-top: 0px; margin-bottom: 5px;'>
-            be<span style='font-size: 0.7em;'>$</span>afe_friend!
+            be_<span style='font-size: 0.7em;'>$</span>afe_friend!
         </h1>
         <p style='text-align: left; color: #add8e6; font-size: 18px; padding-left: 0px; margin-top: 0;'>
             Your Digital Guardian
