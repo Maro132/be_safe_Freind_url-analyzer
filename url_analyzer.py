@@ -33,6 +33,30 @@ def get_base_domain(domain):
         return ".".join(parts[-2:])
     return domain # Fallback for very short or invalid domains
 
+def are_strings_very_similar(s1, s2, max_diff=1):
+    """
+    Checks if two strings are very similar, allowing for a small number of differences.
+    This is a simplified comparison, not a full Levenshtein implementation.
+    It counts character mismatches for strings of similar length.
+    """
+    if not s1 or not s2: # Handle empty strings
+        return False
+
+    # If lengths are too different, they are not very similar
+    if abs(len(s1) - len(s2)) > max_diff:
+        return False
+
+    diff_count = 0
+    # Iterate up to the length of the shorter string
+    for i in range(min(len(s1), len(s2))):
+        if s1[i] != s2[i]:
+            diff_count += 1
+    
+    # Add the difference in lengths to the count (accounts for insertions/deletions)
+    diff_count += abs(len(s1) - len(s2))
+
+    return diff_count <= max_diff
+
 
 def check_url_shortener(url):
     """
@@ -84,31 +108,20 @@ def check_typosquatting(url):
         if domain.endswith("." + common_domain):
             return False, None
 
-        # Proceed with similarity checks only if it's not an exact match or a legitimate subdomain
-        cd_no_dot = common_domain.replace(".", "")
-        domain_no_dot = domain.replace(".", "")
-
-        # Simple common typo checks (e.g., l/1, o/0, missing dot)
-        if (domain.replace('l', '1') == common_domain or
-            domain.replace('o', '0') == common_domain or
-            domain.replace('s', '5') == common_domain or
-            domain.replace('a', '@') == common_domain or
-            (domain_no_dot == cd_no_dot and domain != common_domain) # e.g., googlecom vs google.com
-        ):
-            return True, f"The URL '{url}' might be typosquatting, mimicking '{common_domain}'."
-
-        # Basic check for similar length and content after removing non-alphanumeric chars
+        # Normalize common_domain for comparison (e.g., remove dot for 'googlecom' vs 'google.com' type typos)
         clean_domain = re.sub(r'[^a-z0-9]', '', domain)
         clean_common = re.sub(r'[^a-z0-9]', '', common_domain.lower().replace("www.", ""))
 
-        if len(clean_domain) > 3 and len(clean_common) > 3:
-            # Check for close matches or minor variations (e.g., google.com.net)
-            # This logic needs to be careful not to flag legitimate subdomains or exact matches
-            if clean_common in clean_domain or clean_common in clean_common:
-                # The `domain.endswith("." + common_domain)` check above should handle most legitimate subdomains.
-                # This part is for other "looks similar" cases that are not direct subdomains.
-                if abs(len(clean_domain) - len(clean_common)) <= 2: # Check if lengths are very close
-                    return True, f"The URL '{url}' might be typosquatting, mimicking '{common_domain}'."
+        # Check for simple, common typos (e.g., l/1, o/0, missing dot, very close similarity)
+        # This part is now more focused using are_strings_very_similar
+        if (are_strings_very_similar(clean_domain, clean_common, max_diff=1) or # Very close (1 char diff)
+            are_strings_very_similar(domain.replace('l', '1'), common_domain, max_diff=0) or # l/1 substitution
+            are_strings_very_similar(domain.replace('o', '0'), common_domain, max_diff=0) or # o/0 substitution
+            are_strings_very_similar(domain.replace('s', '5'), common_domain, max_diff=0) or # s/5 substitution
+            are_strings_very_similar(domain.replace('a', '@'), common_domain, max_diff=0) or # a/@ substitution
+            (domain.replace('.', '') == common_domain.replace('.', '') and domain != common_domain) # e.g., googlecom vs google.com
+        ):
+            return True, f"The URL '{url}' might be typosquatting, mimicking '{common_domain}'."
 
     return False, None
 
