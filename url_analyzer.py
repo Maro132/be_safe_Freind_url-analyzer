@@ -5,6 +5,7 @@ import ipaddress
 import json
 import os
 import streamlit as st
+from requests.exceptions import ConnectionError, RequestException # Import specific exception types
 
 # --- IMPORTANT SECURITY WARNING ---
 # You have requested to hardcode your Google Safe Browsing API key directly into the code.
@@ -87,8 +88,8 @@ def check_typosquatting(url):
 
 def check_redirection(url):
     """
-    Checks if a URL performs an immediate redirection to a different domain.
-    Returns (True, message) if redirection detected, (False, None) otherwise.
+    Checks if a URL performs an immediate redirection to a different domain or if it's unreachable.
+    Returns (True, message) if redirection detected or unreachable, (False, None) otherwise.
     """
     try:
         # Use GET to follow redirects
@@ -101,9 +102,15 @@ def check_redirection(url):
         elif response.url != url:
             # Redirection happened but to the same domain (e.g., http to https, or different path)
             return True, f"The URL redirects to: {response.url}. While the domain is the same, be cautious as redirection occurred."
-    except requests.exceptions.RequestException as e:
-        # Handle network errors or timeouts during the request
-        return True, f"Could not check for redirection due to an error: {e}. Be cautious."
+    except ConnectionError as e: # Catch connection errors specifically
+        # Check if the error is due to name resolution (DNS failure)
+        if "Failed to resolve" in str(e) or "NameResolutionError" in str(e):
+            return True, f"The URL's domain ('{urlparse(url).netloc}') could not be resolved (DNS error). This might indicate a non-existent or malicious domain. Be cautious."
+        else:
+            # Other connection errors (e.g., host unreachable, connection refused)
+            return True, f"Could not connect to the URL due to a network error: {e}. Be cautious."
+    except RequestException as e: # Catch other general request-related errors
+        return True, f"Could not check for redirection due to an unexpected error: {e}. Be cautious."
     return False, None
 
 def check_http_vs_https(url):
@@ -198,7 +205,8 @@ def analyze_url(url):
 
     is_redirecting, redirection_msg = check_redirection(url)
     if is_redirecting:
-        warnings.append(f"⚠️ Warning: {redirection_msg} (The URL redirects to a different site).")
+        # The message from check_redirection is now more specific
+        warnings.append(f"⚠️ Warning: {redirection_msg}")
 
     is_http, http_msg = check_http_vs_https(url)
     if is_http:
@@ -226,12 +234,12 @@ def main_streamlit_app():
         <style>
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap');
         body {
-            background-color: #0d1a26; /* Dark blue/black */
+            background-color: #000000; /* Pure Black background */
             color: #add8e6; /* Light blue */
             font-family: 'IBM Plex Mono', monospace;
         }
         .stApp {
-            background-color: #0d1a26;
+            background-color: #000000; /* Pure Black background for the app container */
             color: #add8e6;
         }
         /* Customizing Streamlit's internal components for consistent theme */
@@ -300,12 +308,13 @@ def main_streamlit_app():
         """, unsafe_allow_html=True)
 
     # Main title and subtitle with custom styles
+    # Changed text-align to left and added padding for top-left positioning
     st.markdown(
         """
-        <h1 style='text-align: center; color: #32cd32; font-size: 40px;'>
+        <h1 style='text-align: left; color: #32cd32; font-size: 40px; padding-left: 20px; padding-top: 10px;'>
             be<sub><span style='font-size: 0.7em;'>$</span></sub>afe_friend!
         </h1>
-        <p style='text-align: center; color: #add8e6; font-size: 18px;'>
+        <p style='text-align: left; color: #add8e6; font-size: 18px; padding-left: 20px;'>
             Your Digital Guardian
         </p>
         <hr style='border-top: 1px dashed #0056b3;'>
