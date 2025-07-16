@@ -64,7 +64,12 @@ def check_typosquatting(url):
         if domain == common_domain:
             return False, None
 
-        # Proceed with similarity checks only if it's not an exact match
+        # NEW: Check for legitimate subdomains (e.g., en.wikipedia.org for wikipedia.org)
+        # If the domain ends with the common_domain (preceded by a dot), it's likely a legitimate subdomain.
+        if domain.endswith("." + common_domain):
+            return False, None
+
+        # Proceed with similarity checks only if it's not an exact match or a legitimate subdomain
         cd_no_dot = common_domain.replace(".", "")
         domain_no_dot = domain.replace(".", "")
 
@@ -85,11 +90,9 @@ def check_typosquatting(url):
             # Check for close matches or minor variations (e.g., google.com.net)
             # This logic needs to be careful not to flag legitimate subdomains or exact matches
             if clean_common in clean_domain or clean_domain in clean_common:
-                # Add a check to ensure it's not simply a subdomain or a very common legitimate pattern
-                # This is still heuristic and can be improved with Levenshtein distance
+                # The `domain.endswith("." + common_domain)` check above should handle most legitimate subdomains.
+                # This part is for other "looks similar" cases that are not direct subdomains.
                 if abs(len(clean_domain) - len(clean_common)) <= 2: # Check if lengths are very close
-                    # Further refine to avoid flagging things like 'google.com.au' if 'google.com' is common
-                    # For now, this condition is a balance.
                     return True, f"The URL '{url}' might be typosquatting, mimicking '{common_domain}'."
 
     return False, None
