@@ -104,7 +104,7 @@ def check_typosquatting(url):
         if len(clean_domain) > 3 and len(clean_common) > 3:
             # Check for close matches or minor variations (e.g., google.com.net)
             # This logic needs to be careful not to flag legitimate subdomains or exact matches
-            if clean_common in clean_domain or clean_domain in clean_common:
+            if clean_common in clean_domain or clean_common in clean_common:
                 # The `domain.endswith("." + common_domain)` check above should handle most legitimate subdomains.
                 # This part is for other "looks similar" cases that are not direct subdomains.
                 if abs(len(clean_domain) - len(clean_common)) <= 2: # Check if lengths are very close
@@ -354,11 +354,13 @@ def main_streamlit_app():
     st.write("Hello Maro! Enter a URL below to check its safety.")
 
     # Input field for the URL
-    user_url = st.text_input("Enter URL to analyze:", "https://")
+    user_url = st.text_input("Enter URL to analyze:", "https://").strip() # Added .strip() here
 
     # Analyze button
     if st.button("Analyze URL"):
-        if not user_url or not user_url.startswith(("http://", "https://")):
+        if not user_url: # Check if empty after stripping
+            st.error("Please enter a URL to analyze.")
+        elif not user_url.startswith(("http://", "https://")):
             st.error("Please enter a valid URL, including http:// or https://")
         else:
             # Show a spinner while analyzing
