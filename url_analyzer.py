@@ -8,14 +8,8 @@ import streamlit as st
 from requests.exceptions import ConnectionError, RequestException # Import specific exception types
 
 # --- IMPORTANT SECURITY WARNING ---
-# You have requested to hardcode your Google Safe Browsing API key directly into the code.
-# This is generally NOT recommended for production applications or when sharing code publicly
-# (e.g., on GitHub) as it exposes your key.
-# For better security, it's recommended to use Streamlit's secrets management (.streamlit/secrets.toml)
-# or environment variables, as discussed previously.
-#
-# Your provided API Key: AIzaSyDXadmvnbrYgM50493279uevflUlq168fA
-GOOGLE_SAFE_BROWSING_API_KEY = "AIzaSyDXadmvnbrYgM50493279uevflUlq168fA"
+# The Google Safe Browsing API key and related code have been removed as per your request.
+# This means the application will no longer perform checks using Google's Safe Browsing service.
 
 # --- be_$afe_friend! Core Functions ---
 
@@ -227,64 +221,12 @@ def check_ip_in_url(url):
         # Not a valid IP address
         return False, None
 
-def check_google_safe_browsing(url):
-    """
-    Uses Google Safe Browsing API to check if the URL is malicious.
-    Returns (True, message) if malicious, (False, None) otherwise.
-    """
-    # Debugging: Print API key to verify it's loaded
-    print(f"DEBUG: GOOGLE_SAFE_BROWSING_API_KEY: {GOOGLE_SAFE_BROWSING_API_KEY}")
-
-    # Check if API key is available
-    if not GOOGLE_SAFE_BROWSING_API_KEY:
-        print("DEBUG: API Key is empty or None. Skipping Safe Browsing check.")
-        return False, "Google Safe Browsing API key is missing. Skipping check."
-
-    api_url = f"https://safebrowsing.googleapis.com/v4/threatMatches:find?key={GOOGLE_SAFE_BROWSING_API_KEY}"
-    headers = {"Content-Type": "application/json"}
-    payload = {
-        "client": {
-            "clientId": "be-safe-friend",
-            "clientVersion": "1.0.0"
-        },
-        "threatInfo": {
-            "threatTypes": [
-                "MALWARE", "SOCIAL_ENGINEERING", "UNWANTED_SOFTWARE",
-                "POTENTIALLY_HARMFUL_APPLICATION", "THREAT_TYPE_UNSPECIFIED"
-            ],
-            "platformTypes": ["ANY_PLATFORM"],
-            "threatEntryTypes": ["URL"],
-            "threatEntries": [{"url": url}]
-        }
-    }
-    print(f"DEBUG: Sending payload to Safe Browsing API: {json.dumps(payload)}")
-
-    try:
-        # Make the POST request to the Safe Browsing API
-        response = requests.post(api_url, headers=headers, data=json.dumps(payload), timeout=10)
-        print(f"DEBUG: Safe Browsing API Response Status: {response.status_code}")
-        print(f"DEBUG: Safe Browsing API Response Body: {response.text}")
-
-        response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
-        result = response.json()
-
-        if "matches" in result:
-            # If matches are found, it means the URL is malicious
-            threat_type = result['matches'][0]['threatType'].replace('_', ' ').title()
-            print(f"DEBUG: Safe Browsing detected match: {threat_type}")
-            return True, f"Google Safe Browsing detected the URL as: {threat_type}"
-        else:
-            # No matches found, URL is clean according to Safe Browsing
-            print("DEBUG: Safe Browsing found no matches.")
-            return False, None
-    except requests.exceptions.RequestException as e:
-        print(f"DEBUG: RequestException caught: {e}")
-        # Handle errors during the API call
-        return False, f"Error checking with Google Safe Browsing API: {e}. This check could not be completed."
-    except json.JSONDecodeError:
-        print(f"DEBUG: JSONDecodeError caught. Response was not valid JSON.")
-        # Handle cases where the API response is not valid JSON
-        return False, "Failed to decode Google Safe Browsing API response. This check could not be completed."
+# The check_google_safe_browsing function has been removed as per user request.
+# def check_google_safe_browsing(url):
+#     """
+#     This function has been removed as per user request.
+#     """
+#     return False, None # It will always return False and None as it's removed.
 
 # --- Main Analysis Function ---
 
@@ -317,12 +259,12 @@ def analyze_url(url):
     if is_ip_url:
         warnings.append(f"⚠️ Warning: {ip_url_msg} (This could lead to data theft).")
 
-    # This is a critical check, so it's placed last and gives a "DANGER" message
-    is_malicious, safe_browsing_msg = check_google_safe_browsing(url)
-    if is_malicious: # If Google Safe Browsing detected it as malicious
-        warnings.append(f"🚨 DANGER: {safe_browsing_msg}")
-    elif safe_browsing_msg and not is_malicious: # If there was an error message but not malicious
-        warnings.append(f"⚠️ Warning: {safe_browsing_msg}")
+    # The Google Safe Browsing check has been removed as per user request.
+    # is_malicious, safe_browsing_msg = check_google_safe_browsing(url)
+    # if is_malicious: # If Google Safe Browsing detected it as malicious
+    #     warnings.append(f"🚨 DANGER: {safe_browsing_msg}")
+    # elif safe_browsing_msg and not is_malicious: # If there was an error message but not malicious
+    #     warnings.append(f"⚠️ Warning: {safe_browsing_msg}")
 
 
     return warnings
@@ -464,10 +406,9 @@ def main_streamlit_app():
             # Display results
             if results:
                 for warning in results:
-                    if "DANGER" in warning:
-                        st.markdown(f"<p class='danger-text'>{warning}</p>", unsafe_allow_html=True)
-                    else:
-                        st.markdown(f"<p class='warning-text'>{warning}</p>", unsafe_allow_html=True)
+                    # Since Google Safe Browsing is removed, there will be no DANGER messages from it.
+                    # All remaining warnings will be displayed as regular warnings.
+                    st.markdown(f"<p class='warning-text'>{warning}</p>", unsafe_allow_html=True)
             else:
                 st.markdown("<p class='safe-text'>✅ Good news! The URL appears to be safe and free from common manipulations.</p>", unsafe_allow_html=True)
             st.markdown("---")
