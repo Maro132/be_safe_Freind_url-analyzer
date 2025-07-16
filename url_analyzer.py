@@ -19,6 +19,21 @@ GOOGLE_SAFE_BROWSING_API_KEY = "AIzaSyDXadmvnbrYgM50493279uevflUlq168fA"
 
 # --- be_$afe_friend! Core Functions ---
 
+def get_base_domain(domain):
+    """
+    Extracts the base domain from a given domain name.
+    E.g., 'www.example.com' -> 'example.com', 'sub.example.co.uk' -> 'example.co.uk' (heuristic).
+    This is a simple heuristic and might not cover all complex TLDs (e.g., .co.uk perfectly).
+    """
+    parts = domain.split('.')
+    if len(parts) >= 2:
+        # For most common TLDs (.com, .org, .net), taking the last two parts works.
+        # For complex TLDs like .co.uk, this would still give 'co.uk' as base, which is not ideal,
+        # but it's better than comparing full subdomains.
+        return ".".join(parts[-2:])
+    return domain # Fallback for very short or invalid domains
+
+
 def check_url_shortener(url):
     """
     Checks if a URL is likely a shortened URL and tries to resolve it.
@@ -64,7 +79,7 @@ def check_typosquatting(url):
         if domain == common_domain:
             return False, None
 
-        # NEW: Check for legitimate subdomains (e.g., en.wikipedia.org for wikipedia.org)
+        # Check for legitimate subdomains (e.g., en.wikipedia.org for wikipedia.org)
         # If the domain ends with the common_domain (preceded by a dot), it's likely a legitimate subdomain.
         if domain.endswith("." + common_domain):
             return False, None
@@ -108,13 +123,15 @@ def check_redirection(url):
         initial_domain = urlparse(url).netloc
         final_domain = urlparse(response.url).netloc
 
-        if initial_domain != final_domain:
-            # Only warn if redirection is to a DIFFERENT domain
-            return True, f"The URL redirects from '{initial_domain}' to a different domain: '{final_domain}'. This could be risky."
-        # If redirection occurred but to the SAME domain, we don't issue a warning
-        # as this is often normal behavior (e.g., http to https, or to a login page)
-        # elif response.url != url: # This line is commented out to avoid false positives for same-domain redirects
-        #    return True, f"The URL redirects to: {response.url}. While the domain is the same, be cautious as redirection occurred."
+        # Get base domains for comparison to handle legitimate subdomain redirects
+        initial_base_domain = get_base_domain(initial_domain)
+        final_base_domain = get_base_domain(final_domain)
+
+        # Only warn if redirection occurred AND it's to a different BASE domain
+        if response.url != url and initial_base_domain != final_base_domain:
+            return True, f"The URL redirects from '{initial_domain}' to a different base domain: '{final_domain}'. This could be risky."
+        # No warning if it redirects within the same base domain (e.g., www to non-www, http to https, or subdomain to subdomain)
+        # No warning if no redirection occurred at all (response.url == url)
     except ConnectionError as e: # Catch connection errors specifically
         # Check if the error is due to name resolution (DNS failure)
         if "Failed to resolve" in str(e) or "NameResolutionError" in str(e):
@@ -318,10 +335,10 @@ def main_streamlit_app():
             border-color: #28a745; /* Green border for success */
         }
         </style>
-        """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True
+    )
 
     # Main title and subtitle with custom styles
-    # Changed text-align to left and added padding for top-left positioning
     st.markdown(
         """
         <h1 style='text-align: left; color: #32cd32; font-size: 40px; padding-left: 20px; padding-top: 10px;'>
